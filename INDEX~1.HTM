@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mortgage Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f6fa; --card:#ffffff; --ink:#1a2433; --muted:#64748b; --line:#e2e8f0;
+    --accent:#2563eb; --accent2:#0ea5e9; --green:#059669; --red:#dc2626; --amber:#d97706;
+    --radius:12px; --shadow:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.04);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);padding:20px}
+  .wrap{max-width:1240px;margin:0 auto}
+  h1{font-size:24px;margin-bottom:2px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  /* tabs */
+  .tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+  .tab{padding:9px 18px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:14px;font-weight:600;color:var(--muted)}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .page{display:none}
+  .page.active{display:block}
+  /* layout */
+  .cols{display:grid;grid-template-columns:400px 1fr;gap:18px;align-items:start}
+  @media(max-width:960px){.cols{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:16px}
+  .card h2{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:12px}
+  /* inputs */
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px;color:#334155}
+  .field input,.field select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;color:var(--ink)}
+  .field input:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .switch{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#334155;cursor:pointer;margin-bottom:12px}
+  .switch input{width:auto}
+  fieldset{border:none}
+  .hidden{display:none!important}
+  /* results */
+  .hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+  .stat .v{font-size:22px;font-weight:700}
+  .stat .k{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:2px}
+  .stat.big .v{color:var(--accent);font-size:26px}
+  .stat .v.good{color:var(--green)}
+  .stat .v.bad{color:var(--red)}
+  .charts2{display:grid;grid-template-columns:340px 1fr;gap:16px}
+  @media(max-width:900px){.charts2{grid-template-columns:1fr}}
+  .chartbox{position:relative;height:280px}
+  .chartbox.tall{height:320px}
+  /* breakdown legend */
+  table.mini{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  table.mini td{padding:5px 4px;border-bottom:1px solid var(--line)}
+  table.mini td:last-child{text-align:right;font-weight:600}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:middle}
+  /* amortization table */
+  .tablewrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:10px}
+  table.amort{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+  table.amort th{position:sticky;top:0;background:#0f172a;color:#fff;padding:8px 10px;text-align:right;font-weight:600}
+  table.amort th:first-child{text-align:left}
+  table.amort td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--line)}
+  table.amort td:first-child{text-align:left;font-weight:600}
+  table.amort tr:nth-child(even){background:#f8fafc}
+  table.amort tr.yr{background:#eef2ff;font-weight:700}
+  .pillrow{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+  .pill{padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted)}
+  .pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  /* compare */
+  .cmpgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-bottom:4px}
+  .scname{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-weight:700}
+  .cardbtns{display:flex;gap:8px;margin-top:10px}
+  .summ{font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:8px}
+  @media(max-width:900px){.cmpgrid{grid-template-columns:1fr}}
+  .cmpgrid .card h2{color:var(--accent)}
+  table.cmp{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.cmp th,table.cmp td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:right}
+  table.cmp th:first-child,table.cmp td:first-child{text-align:left;font-weight:600;color:#334155}
+  table.cmp thead th{background:#f1f5f9;font-weight:700}
+  .best{color:var(--green);font-weight:700}
+  button.go{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px}
+  button.go:hover{background:#1d4ed8}
+  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+  .refi-verdict{padding:14px 16px;border-radius:10px;font-size:14.5px;font-weight:600;margin-bottom:14px}
+  .refi-verdict.good{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+  .refi-verdict.bad{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Mortgage Calculator</h1>
+  <div class="sub">Fixed &amp; adjustable rates · full monthly costs · extra payments · amortization · comparisons · refinance</div>
+
+  <div class="tabs">
+    <button class="tab active" data-page="calc">Calculator</button>
+    <button class="tab" data-page="amort">Amortization</button>
+    <button class="tab" data-page="compare">Compare Loans</button>
+    <button class="tab" data-page="refi">Refinance</button>
+  </div>
+
+  <!-- ============ CALCULATOR ============ -->
+  <div class="page active" id="page-calc">
+    <div class="cols">
+      <div>
+        <div class="card">
+          <h2>Home &amp; Loan</h2>
+          <div class="field"><label>Home price ($)</label><input type="number" id="price" value="450000" step="1000"></div>
+          <div class="row2">
+            <div class="field"><label>Down payment ($)</label><input type="number" id="downD" value="90000" step="1000"></div>
+            <div class="field"><label>Down payment (%)</label><input type="number" id="downP" value="20" step="0.5"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Loan term (years)</label>
+              <select id="term"><option>30</option><option>25</option><option>20</option><option>15</option><option>10</option></select>
+            </div>
+            <div class="field"><label>Interest rate (%/yr)</label><input type="number" id="rate" value="6.5" step="0.05"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>First payment month</label>
+              <select id="startM"></select>
+            </div>
+            <div class="field"><label>Year</label><input type="number" id="startY" value="2026"></div>
+          </div>
+          <div class="field"><label>Loan type</label>
+            <select id="loanType"><option value="fixed">Fixed rate</option><option value="arm">Adjustable rate (ARM)</option></select>
+          </div>
+          <fieldset id="armBox" class="hidden">
+            <div class="row2">
+              <div class="field"><label>Fixed period (years)</label>
+                <select id="armFixed"><option>3</option><option selected>5</option><option>7</option><option>10</option></select>
+              </div>
+              <div class="field"><label>Adjusts every (years)</label>
+                <select id="armEvery"><option selected>1</option><option>2</option><option>5</option></select>
+              </div>
+            </div>
+            <div class="row3">
+              <div class="field"><label>Expected change per adj. (%)</label><input type="number" id="armStep" value="0.5" step="0.125"></div>
+              <div class="field"><label>Lifetime max rate (%)</label><input type="number" id="armMax" value="11.5" step="0.125"></div>
+              <div class="field"><label>Lifetime min rate (%)</label><input type="number" id="armMin" value="3" step="0.125"></div>
+            </div>
+            <div class="hint">e.g. a 5/1 ARM: fixed 5 yrs, then adjusts yearly. Payment is recalculated at each adjustment.</div>
+          </fieldset>
+        </div>
+
+        <div class="card">
+          <h2>Taxes, Insurance &amp; Fees</h2>
+          <div class="row2">
+            <div class="field"><label>Property tax</label><input type="number" id="tax" value="1.1" step="0.05"></div>
+            <div class="field"><label>Tax entered as</label>
+              <select id="taxMode"><option value="pct">% of home price / yr</option><option value="usd">$ / year</option></select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Home insurance ($/yr)</label><input type="number" id="ins" value="1800" step="50"></div>
+            <div class="field"><label>HOA ($/mo)</label><input type="number" id="hoa" value="0" step="10"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>PMI rate (%/yr of loan)</label><input type="number" id="pmiRate" value="0.6" step="0.05"></div>
+            <div class="field"><label>PMI cancels at LTV (%)</label><input type="number" id="pmiLtv" value="80" step="1"></div>
+          </div>
+          <div class="field"><label>Other monthly costs ($/mo)</label><input type="number" id="other" value="0" step="10">
+            <div class="hint">Utilities, maintenance budget, etc. PMI applies automatically only when down payment is below 20%.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Points &amp; Closing Costs</h2>
+          <div class="row2">
+            <div class="field"><label>Discount points bought</label><input type="number" id="points" value="0" step="0.25" min="0"></div>
+            <div class="field"><label>Rate cut per point (%)</label><input type="number" id="ptRed" value="0.25" step="0.05"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Other closing costs ($)</label><input type="number" id="closing" value="5000" step="250"></div>
+            <div class="field"><label>Points &amp; costs paid</label>
+              <select id="costPaid"><option value="cash">Out of pocket</option><option value="roll">Rolled into loan</option></select>
+            </div>
+          </div>
+          <div class="hint">Each point costs 1% of the loan amount and lowers your rate by the amount set. Typical closing costs (title, appraisal, origination…) run 2–5% of the loan.</div>
+        </div>
+
+        <div class="card">
+          <h2>Extra Payments</h2>
+          <div class="field"><label>Extra every month ($)</label><input type="number" id="xMon" value="0" step="25"></div>
+          <div class="row2">
+            <div class="field"><label>Extra once a year ($)</label><input type="number" id="xYr" value="0" step="100"></div>
+            <div class="field"><label>In month</label>
+              <select id="xYrM"></select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>One-time payment ($)</label><input type="number" id="xOne" value="0" step="500"></div>
+            <div class="field"><label>After payment #</label><input type="number" id="xOneM" value="12" step="1" min="1"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Take-Home Pay</h2>
+          <div class="row2">
+            <div class="field"><label>Annual take-home ($)</label><input type="number" id="salary" value="90000" step="1000"></div>
+            <div class="field"><label>Monthly take-home ($)</label><input type="number" id="salaryMo" value="7500" step="100"></div>
+          </div>
+          <div class="hint">Net pay — what actually lands in your account after tax and payroll deductions. Edit either box and the other follows.</div>
+        </div>
+
+        <div class="card">
+          <h2>Other Monthly Expenses</h2>
+          <div id="expList"></div>
+          <button class="pill" id="expAdd" style="margin-top:6px">+ Add expense line</button>
+          <table class="mini" style="margin-top:12px">
+            <tr><td><b>Housing (this mortgage)</b></td><td id="expHousing">–</td></tr>
+            <tr><td><b>Other expenses</b></td><td id="expOther">–</td></tr>
+            <tr><td><b>Total monthly outgoings</b></td><td id="expTotal">–</td></tr>
+            <tr><td><b>Left over each month</b></td><td id="expLeft">–</td></tr>
+          </table>
+          <div class="hint">If your 401k comes out of your paycheck before it reaches you, it's already excluded from take-home — only list it here if you contribute separately.</div>
+        </div>
+
+        <div class="card">
+          <h2>Save to Compare</h2>
+          <div class="field"><label>Scenario name (optional)</label><input id="saveName" placeholder="e.g. 30-yr fixed, 20% down"></div>
+          <button class="go" id="saveBtn" style="margin-bottom:0;width:100%">+ Save this loan to Compare</button>
+          <div class="hint" id="saveMsg" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="hero">
+          <div class="stat big"><div class="v" id="rMonthly">–</div><div class="k">Total monthly payment</div></div>
+          <div class="stat"><div class="v" id="rIncome">–</div><div class="k">% of take-home pay</div></div>
+          <div class="stat"><div class="v" id="rPI">–</div><div class="k">Principal &amp; interest</div></div>
+          <div class="stat"><div class="v" id="rLoan">–</div><div class="k">Loan amount</div></div>
+          <div class="stat"><div class="v" id="rPayoff">–</div><div class="k">Payoff date</div></div>
+        </div>
+        <div class="hero">
+          <div class="stat"><div class="v" id="rInt">–</div><div class="k">Total interest</div></div>
+          <div class="stat"><div class="v" id="rCost">–</div><div class="k">Total of all payments</div></div>
+          <div class="stat"><div class="v good" id="rSaved">–</div><div class="k">Interest saved (extras)</div></div>
+          <div class="stat"><div class="v good" id="rFaster">–</div><div class="k">Paid off sooner by</div></div>
+        </div>
+        <div class="hero">
+          <div class="stat"><div class="v" id="rClosing">–</div><div class="k">Cash due at closing</div></div>
+          <div class="stat"><div class="v" id="rPtsCost">–</div><div class="k">Cost of points</div></div>
+          <div class="stat"><div class="v" id="rEffRate">–</div><div class="k">Effective rate</div></div>
+          <div class="stat"><div class="v" id="rPtsBE">–</div><div class="k">Points break-even</div></div>
+        </div>
+        <div class="hero">
+          <div class="stat"><div class="v" id="rOutgo">–</div><div class="k">Total monthly outgoings</div></div>
+          <div class="stat"><div class="v" id="rLeft">–</div><div class="k">Left over each month</div></div>
+          <div class="stat"><div class="v" id="rAllPct">–</div><div class="k">Outgoings as % of take-home</div></div>
+          <div class="stat"><div class="v" id="rVerdict" style="font-size:15px">–</div><div class="k">Affordability</div></div>
+        </div>
+        <div class="hero" id="pmiHero">
+          <div class="stat"><div class="v" id="rPmiMo">–</div><div class="k">PMI per month</div></div>
+          <div class="stat"><div class="v" id="rPmiEnd">–</div><div class="k">PMI drops off</div></div>
+          <div class="stat"><div class="v" id="rPmiTotal">–</div><div class="k">Total PMI paid</div></div>
+        </div>
+
+        <div class="charts2">
+          <div class="card">
+            <h2>Monthly Payment Breakdown</h2>
+            <div class="chartbox"><canvas id="chDonut"></canvas></div>
+            <table class="mini" id="bkTable"></table>
+          </div>
+          <div class="card">
+            <h2>Loan Balance Over Time</h2>
+            <div class="chartbox tall"><canvas id="chBal"></canvas></div>
+          </div>
+        </div>
+        <div class="charts2">
+          <div class="card">
+            <h2>Where Your Take-Home Pay Goes</h2>
+            <div class="chartbox"><canvas id="chBudget"></canvas></div>
+            <table class="mini" id="budTable"></table>
+          </div>
+          <div class="card">
+            <h2>Principal vs Interest Paid Each Year</h2>
+            <div class="chartbox tall"><canvas id="chBars"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AMORTIZATION ============ -->
+  <div class="page" id="page-amort">
+    <div class="card">
+      <div class="pillrow">
+        <button class="pill active" id="pillYear">Yearly</button>
+        <button class="pill" id="pillMonth">Monthly</button>
+        <span class="note" style="margin:0 0 0 8px">Uses the inputs from the Calculator tab (including extra payments and ARM settings).</span>
+      </div>
+      <div class="tablewrap"><table class="amort" id="amortTable"></table></div>
+    </div>
+  </div>
+
+  <!-- ============ COMPARE ============ -->
+  <div class="page" id="page-compare">
+    <div class="cmpgrid" id="cmpCards"></div>
+    <div class="card"><div style="overflow:auto"><table class="cmp" id="cmpTable"></table></div>
+      <div class="note" id="cmpNote">Build a loan on the <b>Calculator</b> tab — with any mix of ARM settings, PMI, extra payments, taxes and fees — then click <b>"Save this loan to Compare"</b>. Every option is snapshotted. Green marks the best value in each row; "Load" puts a saved loan back into the calculator for editing. Your expense lines are shared across all scenarios, so "Left over each month" reflects the same budget throughout.</div>
+    </div>
+  </div>
+
+  <!-- ============ REFINANCE ============ -->
+  <div class="page" id="page-refi">
+    <div class="cols">
+      <div>
+        <div class="card">
+          <h2>Current Loan</h2>
+          <div class="row2">
+            <div class="field"><label>Current balance ($)</label><input type="number" id="rfBal" value="350000" step="1000"></div>
+            <div class="field"><label>Current rate (%)</label><input type="number" id="rfRate" value="7.25" step="0.05"></div>
+          </div>
+          <div class="field"><label>Years remaining</label><input type="number" id="rfYears" value="27" step="1"></div>
+        </div>
+        <div class="card">
+          <h2>New Loan</h2>
+          <div class="row2">
+            <div class="field"><label>New rate (%)</label><input type="number" id="rfNewRate" value="5.875" step="0.05"></div>
+            <div class="field"><label>New term (years)</label>
+              <select id="rfNewTerm"><option>30</option><option>25</option><option>20</option><option selected>15</option><option>10</option></select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Closing costs ($)</label><input type="number" id="rfCost" value="6000" step="250"></div>
+            <div class="field"><label>Closing costs paid</label>
+              <select id="rfRoll"><option value="cash">Out of pocket</option><option value="roll">Rolled into loan</option></select>
+            </div>
+          </div>
+          <div class="field"><label>Cash out ($, optional)</label><input type="number" id="rfCashOut" value="0" step="1000"></div>
+        </div>
+      </div>
+      <div>
+        <div id="rfVerdict" class="refi-verdict good">–</div>
+        <div class="hero">
+          <div class="stat"><div class="v" id="rfOldPay">–</div><div class="k">Current payment (P&amp;I)</div></div>
+          <div class="stat"><div class="v" id="rfNewPay">–</div><div class="k">New payment (P&amp;I)</div></div>
+          <div class="stat"><div class="v" id="rfDelta">–</div><div class="k">Monthly difference</div></div>
+          <div class="stat"><div class="v" id="rfBreak">–</div><div class="k">Break-even</div></div>
+        </div>
+        <div class="hero">
+          <div class="stat"><div class="v" id="rfOldInt">–</div><div class="k">Interest left (current)</div></div>
+          <div class="stat"><div class="v" id="rfNewInt">–</div><div class="k">Interest (new loan)</div></div>
+          <div class="stat"><div class="v" id="rfLife">–</div><div class="k">Lifetime savings*</div></div>
+        </div>
+        <div class="card">
+          <h2>Remaining Balance: Keep vs Refinance</h2>
+          <div class="chartbox tall"><canvas id="chRefi"></canvas></div>
+          <div class="note">*Lifetime savings = (interest left on current loan) − (interest on new loan + closing costs). A shorter new term can raise the monthly payment yet still save a lot of interest overall.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+// ================= PURE MATH =================
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const pmt=(P,mr,n)=> mr===0 ? P/n : P*mr/(1-Math.pow(1+mr,-n));
+function buildSchedule(cfg){
+  const n=Math.round(cfg.years*12);
+  let bal=cfg.P, rate=cfg.rate, m=0, pay=pmt(bal,rate/1200,n);
+  let totInt=0, totPmi=0, pmiEnd=0;
+  const rows=[];
+  const fixedM=cfg.arm?cfg.arm.fixedY*12:Infinity;
+  const adjM=cfg.arm?cfg.arm.everyY*12:1;
+  const firstPI=pay;
+  while(bal>0.005 && m<1200){
+    m++;
+    if(cfg.arm && m>fixedM && (m-fixedM-1)%adjM===0){
+      rate=Math.min(cfg.arm.max,Math.max(cfg.arm.min,rate+cfg.arm.step));
+      pay=pmt(bal,rate/1200,Math.max(n-m+1,1));
+    }
+    const int=bal*rate/1200;
+    const prin=Math.min(pay-int,bal);
+    let extra=cfg.xMon||0;
+    if(cfg.xYr && (((cfg.startM0||1)-1+m-1)%12)+1===cfg.xYrM) extra+=cfg.xYr;
+    if(cfg.oneTimes) for(const o of cfg.oneTimes) if(o.m===m) extra+=o.amt;
+    extra=Math.max(0,Math.min(extra,bal-prin));
+    let pmi=0;
+    if(cfg.pmiMo && (bal/cfg.price)*100>cfg.pmiLtv){pmi=cfg.pmiMo;pmiEnd=m;}
+    bal-=(prin+extra);
+    totInt+=int; totPmi+=pmi;
+    rows.push({m,rate,int,prin,extra,pmi,bal:Math.max(bal,0)});
+  }
+  return {rows,months:m,totInt,totPmi,pmiEnd,firstPI};
+}
+// ================= UI =================
+const $=id=>document.getElementById(id);
+const num=id=>parseFloat($(id).value)||0;
+const fmt0=n=>n.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+const fmt2=n=>n.toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2});
+const monthName=(sm,sy,off)=>{const t=sm-1+off;return MONTHS[t%12].slice(0,3)+' '+(sy+Math.floor(t/12));};
+const yearsMonths=m=>{const y=Math.floor(m/12),r=m%12;return ((y?y+' yr ':'')+(r?r+' mo':'')).trim()||'0 mo';};
+const COLORS=['#2563eb','#0ea5e9','#059669','#d97706','#8b5cf6','#64748b'];
+const charts={};
+function makeChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
+
+// populate month selects
+[['startM',8],['xYrM',12]].forEach(([id,def])=>{const s=$(id);MONTHS.forEach((mn,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=mn;s.appendChild(o);});s.value=def;});
+
+let S=null, amortMode='year';
+function calc(){
+  const price=num('price'), downD=num('downD');
+  const baseLoan=Math.max(price-downD,0);
+  const years=parseInt($('term').value), quotedRate=num('rate');
+  const pts=num('points'), ptsCost=baseLoan*pts/100, closeCost=num('closing');
+  const rollCosts=$('costPaid').value==='roll';
+  const rate=Math.max(0.1,quotedRate-pts*num('ptRed'));
+  const P=baseLoan+(rollCosts?ptsCost+closeCost:0);
+  const startM0=parseInt($('startM').value), startY=parseInt($('startY').value)||new Date().getFullYear();
+  const isArm=$('loanType').value==='arm';
+  $('armBox').classList.toggle('hidden',!isArm);
+  const arm=isArm?{fixedY:parseInt($('armFixed').value),everyY:parseInt($('armEvery').value),step:num('armStep'),max:num('armMax'),min:num('armMin')}:null;
+  const taxYr=$('taxMode').value==='pct'?price*num('tax')/100:num('tax');
+  const insYr=num('ins'), hoa=num('hoa'), other=num('other');
+  const downPct=price?downD/price*100:0;
+  const pmiMo=downPct<20?P*num('pmiRate')/100/12:0;
+  const base={P,rate,years,arm,price,pmiMo,pmiLtv:num('pmiLtv'),startM0};
+  const withX={...base,xMon:num('xMon'),xYr:num('xYr'),xYrM:parseInt($('xYrM').value),
+    oneTimes:num('xOne')>0?[{m:Math.max(1,Math.round(num('xOneM'))),amt:num('xOne')}]:[]};
+  const s=buildSchedule(withX), s0=buildSchedule(base);
+  S={s,s0,startM0,startY,P,price};
+  const pi=s.firstPI, taxMo=taxYr/12, insMo=insYr/12, pmi1=s.rows.length?s.rows[0].pmi:0;
+  const totalMo=pi+taxMo+insMo+pmi1+hoa+other;
+  $('rMonthly').textContent=fmt2(totalMo);
+  const salMo=num('salaryMo'), pct=salMo?totalMo/salMo*100:0;
+  const iE=$('rIncome');
+  iE.textContent=pct?pct.toFixed(1)+'%':'—';
+  iE.style.color=pct<=35?'var(--green)':(pct<=43?'var(--amber)':'var(--red)');
+  renderBudget(totalMo,salMo);
+  $('rPI').textContent=fmt2(pi);
+  $('rLoan').textContent=fmt0(P);
+  $('rPayoff').textContent=s.months?monthName(startM0,startY,s.months-1):'—';
+  $('rInt').textContent=fmt0(s.totInt);
+  $('rCost').textContent=fmt0(P+s.totInt+s.totPmi+(taxMo+insMo+hoa+other)*s.months+(rollCosts?0:ptsCost+closeCost));
+  $('rClosing').textContent=fmt0(downD+(rollCosts?0:ptsCost+closeCost));
+  $('rPtsCost').textContent=pts>0?fmt0(ptsCost):'—';
+  $('rEffRate').textContent=rate.toFixed(3).replace(/0+$/,'').replace(/\.$/,'')+'%';
+  if(pts>0){
+    const diff=pmt(P,quotedRate/1200,years*12)-pmt(P,rate/1200,years*12);
+    $('rPtsBE').textContent=diff>0?yearsMonths(Math.ceil(ptsCost/diff)):'Never';
+  } else $('rPtsBE').textContent='—';
+  const saved=s0.totInt-s.totInt, faster=s0.months-s.months;
+  $('rSaved').textContent=saved>0.5?fmt0(saved):'—';
+  $('rFaster').textContent=faster>0?yearsMonths(faster):'—';
+  if(pmiMo>0){
+    $('pmiHero').classList.remove('hidden');
+    $('rPmiMo').textContent=fmt2(pmiMo);
+    $('rPmiEnd').textContent=monthName(startM0,startY,Math.max(s.pmiEnd-1,0));
+    $('rPmiTotal').textContent=fmt0(s.totPmi);
+  } else $('pmiHero').classList.add('hidden');
+  drawDonut(pi,taxMo,insMo,pmi1,hoa,other);
+  drawBal(s,s0,startY);
+  drawBars(s);
+  renderAmort();
+}
+function drawDonut(pi,tax,ins,pmi,hoa,other){
+  const items=[['Principal & interest',pi],['Property tax',tax],['Insurance',ins],['PMI',pmi],['HOA',hoa],['Other',other]].filter(x=>x[1]>0.005);
+  makeChart('chDonut',{type:'doughnut',
+    data:{labels:items.map(i=>i[0]),datasets:[{data:items.map(i=>i[1]),backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]},
+    options:{maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+fmt2(c.parsed)}}}}});
+  $('bkTable').innerHTML=items.map((it,i)=>'<tr><td><span class="dot" style="background:'+COLORS[i]+'"></span>'+it[0]+'</td><td>'+fmt2(it[1])+'</td></tr>').join('');
+}
+function drawBal(s,s0,startY){
+  const maxY=Math.ceil(s0.months/12), labels=[], a=[], b=[];
+  for(let y=0;y<=maxY;y++){
+    labels.push(startY+y);
+    a.push(y===0?S.P:(s.rows[Math.min(y*12,s.months)-1]||{bal:0}).bal);
+    b.push(y===0?S.P:(s0.rows[Math.min(y*12,s0.months)-1]||{bal:0}).bal);
+  }
+  const hasX=s.totInt<s0.totInt-0.5;
+  const ds=[{label:'Standard schedule',data:b,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',fill:true,tension:.25,pointRadius:0}];
+  if(hasX) ds.push({label:'With extra payments',data:a,borderColor:'#059669',fill:false,tension:.25,pointRadius:0,borderDash:[6,4]});
+  makeChart('chBal',{type:'line',data:{labels,datasets:ds},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:hasX},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt0(c.parsed.y)}}},
+      scales:{y:{ticks:{callback:v=>'$'+Math.round(v/1000)+'k'}}}}});
+}
+function drawBars(s){
+  const yrs=Math.ceil(s.months/12), lp=[], li=[], labels=[];
+  for(let y=0;y<yrs;y++){
+    let p=0,i=0;
+    for(let m=y*12;m<Math.min((y+1)*12,s.months);m++){p+=s.rows[m].prin+s.rows[m].extra;i+=s.rows[m].int;}
+    labels.push('Yr '+(y+1)); lp.push(p); li.push(i);
+  }
+  makeChart('chBars',{type:'bar',
+    data:{labels,datasets:[{label:'Principal',data:lp,backgroundColor:'#2563eb'},{label:'Interest',data:li,backgroundColor:'#f59e0b'}]},
+    options:{maintainAspectRatio:false,
+      plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt0(c.parsed.y)}}},
+      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'$'+Math.round(v/1000)+'k'}}}}});
+}
+function renderAmort(){
+  if(!S)return;
+  const s=S.s, showRate=$('loanType').value==='arm';
+  let html='<thead><tr><th>'+(amortMode==='year'?'Year':'Payment')+'</th>'+(showRate?'<th>Rate</th>':'')+
+    '<th>Paid</th><th>Principal</th><th>Interest</th><th>Extra</th><th>PMI</th><th>Balance</th></tr></thead><tbody>';
+  if(amortMode==='month'){
+    for(const r of s.rows){
+      html+='<tr><td>#'+r.m+' · '+monthName(S.startM0,S.startY,r.m-1)+'</td>'+(showRate?'<td>'+r.rate.toFixed(3)+'%</td>':'')+
+        '<td>'+fmt2(r.int+r.prin+r.extra+r.pmi)+'</td><td>'+fmt2(r.prin)+'</td><td>'+fmt2(r.int)+'</td><td>'+
+        (r.extra>0.005?fmt2(r.extra):'—')+'</td><td>'+(r.pmi>0.005?fmt2(r.pmi):'—')+'</td><td>'+fmt2(r.bal)+'</td></tr>';
+    }
+  } else {
+    const yrs=Math.ceil(s.months/12);
+    for(let y=0;y<yrs;y++){
+      let p=0,i=0,x=0,pm=0,bal=0,rt=0;
+      for(let m=y*12;m<Math.min((y+1)*12,s.months);m++){const r=s.rows[m];p+=r.prin;i+=r.int;x+=r.extra;pm+=r.pmi;bal=r.bal;rt=r.rate;}
+      html+='<tr class="yr"><td>Year '+(y+1)+'</td>'+(showRate?'<td>'+rt.toFixed(3)+'%</td>':'')+
+        '<td>'+fmt0(p+i+x+pm)+'</td><td>'+fmt0(p)+'</td><td>'+fmt0(i)+'</td><td>'+
+        (x>0.5?fmt0(x):'—')+'</td><td>'+(pm>0.5?fmt0(pm):'—')+'</td><td>'+fmt0(bal)+'</td></tr>';
+    }
+  }
+  $('amortTable').innerHTML=html+'</tbody>';
+}
+
+// ================= OTHER MONTHLY EXPENSES =================
+let expenses=[
+  {n:'Car payment',a:450},{n:'Car insurance',a:140},{n:'Phone bill',a:80},
+  {n:'Utilities',a:220},{n:'Groceries',a:600},{n:'Internet',a:70},
+  {n:'Student loan',a:0},{n:'Subscriptions',a:50},{n:'401k / savings',a:0}];
+const EXPCOL=['#2563eb','#0ea5e9','#059669','#d97706','#8b5cf6','#ec4899','#14b8a6','#f59e0b','#6366f1','#84cc16','#64748b'];
+function renderExp(){
+  $('expList').innerHTML=expenses.map((e,i)=>
+    '<div class="row2" style="grid-template-columns:1fr 96px 30px;gap:6px;margin-bottom:6px;align-items:center">'+
+    '<input value="'+esc(e.n)+'" data-en="'+i+'" placeholder="Expense name">'+
+    '<input type="number" value="'+e.a+'" step="10" data-ea="'+i+'">'+
+    '<button class="pill" data-ex="'+i+'" style="padding:6px 0;text-align:center" title="Remove">&times;</button></div>').join('');
+  $('expList').querySelectorAll('input').forEach(el=>{
+    el.style.padding='7px 9px';el.style.border='1px solid var(--line)';
+    el.style.borderRadius='8px';el.style.fontSize='13px';el.style.width='100%';});
+}
+const expTotal=()=>expenses.reduce((t,e)=>t+(+e.a||0),0);
+function renderBudget(housing,salMo){
+  const other=expTotal(), all=housing+other, left=salMo-all;
+  $('expHousing').textContent=fmt2(housing);
+  $('expOther').textContent=fmt2(other);
+  $('expTotal').textContent=fmt2(all);
+  const lE=$('expLeft');
+  lE.textContent=salMo?fmt2(left):'set take-home pay';
+  lE.style.color=left>=0?'var(--green)':'var(--red)';
+  $('rOutgo').textContent=fmt2(all);
+  const rL=$('rLeft');
+  rL.textContent=salMo?fmt2(left):'—';
+  rL.style.color=left>=0?'var(--green)':'var(--red)';
+  const apct=salMo?all/salMo*100:0;
+  const aE=$('rAllPct');
+  aE.textContent=apct?apct.toFixed(1)+'%':'—';
+  aE.style.color=apct<=70?'var(--green)':(apct<=90?'var(--amber)':'var(--red)');
+  const vE=$('rVerdict');
+  if(!salMo){vE.textContent='—';vE.style.color='';}
+  else if(left<0){vE.textContent='Over budget';vE.style.color='var(--red)';}
+  else if(apct<=70){vE.textContent='Comfortable';vE.style.color='var(--green)';}
+  else if(apct<=90){vE.textContent='Tight';vE.style.color='var(--amber)';}
+  else {vE.textContent='Very tight';vE.style.color='var(--red)';}
+  const items=[['Housing (mortgage)',housing]]
+    .concat(expenses.filter(e=>+e.a>0).map(e=>[e.n||'Unnamed',+e.a]));
+  if(salMo&&left>0)items.push(['Left over',left]);
+  makeChart('chBudget',{type:'doughnut',
+    data:{labels:items.map(i=>i[0]),datasets:[{data:items.map(i=>i[1]),
+      backgroundColor:items.map((it,i)=>it[0]==='Left over'?'#cbd5e1':EXPCOL[i%EXPCOL.length]),
+      borderWidth:2,borderColor:'#fff'}]},
+    options:{maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>c.label+': '+fmt2(c.parsed)+(salMo?' ('+(c.parsed/salMo*100).toFixed(1)+'% of pay)':'')}}}}});
+  $('budTable').innerHTML=items.map((it,i)=>'<tr><td><span class="dot" style="background:'+
+    (it[0]==='Left over'?'#cbd5e1':EXPCOL[i%EXPCOL.length])+'"></span>'+esc(it[0])+'</td><td>'+fmt2(it[1])+'</td></tr>').join('')+
+    (salMo&&left<0?'<tr><td colspan="2" style="color:var(--red);font-weight:600">Short by '+fmt2(-left)+' each month</td></tr>':'');
+}
+$('expList').addEventListener('input',e=>{
+  const n=e.target.dataset.en, a=e.target.dataset.ea;
+  if(n!==undefined)expenses[+n].n=e.target.value;
+  if(a!==undefined)expenses[+a].a=parseFloat(e.target.value)||0;
+  if(n!==undefined||a!==undefined)calc();
+});
+$('expList').addEventListener('click',e=>{
+  const x=e.target.dataset.ex;
+  if(x!==undefined){expenses.splice(+x,1);renderExp();calc();}
+});
+$('expAdd').addEventListener('click',()=>{expenses.push({n:'',a:0});renderExp();calc();});
+// annual <-> monthly take-home sync
+$('salary').addEventListener('input',()=>{$('salaryMo').value=Math.round(num('salary')/12);});
+$('salaryMo').addEventListener('input',()=>{$('salary').value=Math.round(num('salaryMo')*12);});
+
+// ================= COMPARE (saved snapshots) =================
+const SNAP_IDS=['price','downD','downP','term','rate','startM','startY','loanType','armFixed','armEvery','armStep','armMax','armMin','tax','taxMode','ins','hoa','pmiRate','pmiLtv','other','xMon','xYr','xYrM','xOne','xOneM','salary','salaryMo','points','ptRed','closing','costPaid'];
+const MAX_SNAPS=4;
+let scenarios=[];
+const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const getVals=()=>{const v={};SNAP_IDS.forEach(id=>v[id]=$(id).value);return v;};
+function setVals(v){SNAP_IDS.forEach(id=>{if(v[id]!==undefined)$(id).value=v[id];});calc();}
+function metricsOf(v){
+  const price=+v.price||0, downD=+v.downD||0, baseLoan=Math.max(price-downD,0);
+  const pts=+v.points||0, ptsCost=baseLoan*pts/100, closeCost=+v.closing||0;
+  const rollCosts=v.costPaid==='roll';
+  const rate=Math.max(0.1,(+v.rate||0)-pts*(+v.ptRed||0));
+  const P=baseLoan+(rollCosts?ptsCost+closeCost:0);
+  const isArm=v.loanType==='arm';
+  const arm=isArm?{fixedY:parseInt(v.armFixed),everyY:parseInt(v.armEvery),step:+v.armStep||0,max:+v.armMax||99,min:+v.armMin||0}:null;
+  const taxYr=v.taxMode==='pct'?price*(+v.tax||0)/100:(+v.tax||0);
+  const insYr=+v.ins||0, hoa=+v.hoa||0, other=+v.other||0;
+  const downPct=price?downD/price*100:0;
+  const pmiMo=downPct<20?P*(+v.pmiRate||0)/100/12:0;
+  const s=buildSchedule({P,rate,years:parseInt(v.term),arm,price,pmiMo,pmiLtv:+v.pmiLtv||80,
+    startM0:parseInt(v.startM)||1,xMon:+v.xMon||0,xYr:+v.xYr||0,xYrM:parseInt(v.xYrM)||12,
+    oneTimes:(+v.xOne||0)>0?[{m:Math.max(1,Math.round(+v.xOneM||1)),amt:+v.xOne}]:[]});
+  const pmi1=s.rows.length?s.rows[0].pmi:0;
+  const moTotal=s.firstPI+(+v.xMon||0)+taxYr/12+insYr/12+pmi1+hoa+other;
+  const salMo=(+v.salaryMo||0)||((+v.salary||0)/12);
+  const rateTxt=pts>0?rate.toFixed(3).replace(/0+$/,'').replace(/\.$/,'')+'% (w/ '+pts+' pts)':(+v.rate)+'%';
+  return {P,downPct,pi:s.firstPI,moTotal,salMo,int:s.totInt,pmiTot:s.totPmi,months:s.months,
+    upfront:ptsCost+closeCost,cashClose:downD+(rollCosts?0:ptsCost+closeCost),
+    total:P+s.totInt+s.totPmi+(rollCosts?0:ptsCost+closeCost),
+    pctInc:salMo?moTotal/salMo*100:0,
+    typeTxt:rateTxt+' '+(isArm?'ARM '+v.armFixed+'/'+v.armEvery:'fixed')+' · '+v.term+' yr'};
+}
+const autoName=v=>fmt0(Math.max((+v.price||0)-(+v.downD||0),0))+' @ '+v.rate+'% · '+v.term+'yr '+(v.loanType==='arm'?'ARM':'fixed');
+function renderCmp(){
+  const cards=$('cmpCards');
+  if(!scenarios.length){
+    cards.innerHTML='<div class="card" style="grid-column:1/-1;margin-bottom:0"><div class="note" style="margin:0">No saved loans yet — build one on the Calculator tab and click <b>"Save this loan to Compare"</b>.</div></div>';
+    $('cmpTable').innerHTML='';return;
+  }
+  const M=scenarios.map(sc=>metricsOf(sc.v));
+  cards.innerHTML=scenarios.map((sc,i)=>{
+    const v=sc.v, m=M[i];
+    const extras=[];
+    if(+v.xMon)extras.push('+$'+v.xMon+'/mo');
+    if(+v.xYr)extras.push('+$'+v.xYr+'/yr');
+    if(+v.xOne)extras.push('$'+v.xOne+' one-time');
+    return '<div class="card" style="margin-bottom:0"><h2>Scenario '+String.fromCharCode(65+i)+'</h2>'+
+      '<input class="scname" value="'+esc(sc.name)+'" data-name="'+i+'">'+
+      '<div class="summ">'+fmt0(+v.price)+' home · '+m.downPct.toFixed(1)+'% down<br>'+m.typeTxt+
+      (extras.length?'<br>Extra: '+extras.join(', '):'')+
+      (m.pmiTot>0.5?'<br>PMI applies':'')+'</div>'+
+      '<div class="cardbtns"><button class="pill" data-load="'+i+'">Load</button><button class="pill" data-del="'+i+'">Remove</button></div></div>';
+  }).join('');
+  const rows=[
+    ['Loan amount',M.map(m=>m.P),fmt0,null],
+    ['Rate & term',M.map(m=>m.typeTxt),t=>t,null],
+    ['Monthly P&I',M.map(m=>m.pi),fmt2,'min'],
+    ['Total monthly (all-in)',M.map(m=>m.moTotal),fmt2,'min'],
+    ['Housing % of take-home pay',M.map(m=>m.pctInc),p=>p?p.toFixed(1)+'%':'—','min'],
+    ['Other monthly expenses',M.map(()=>expTotal()),fmt2,null],
+    ['Left over each month',M.map(m=>m.salMo?m.salMo-m.moTotal-expTotal():0),
+      v=>v?fmt2(v):'—','max'],
+    ['Total interest',M.map(m=>m.int),fmt0,'min'],
+    ['Total PMI',M.map(m=>m.pmiTot),fmt0,'min'],
+    ['Points + closing costs',M.map(m=>m.upfront),fmt0,'min'],
+    ['Cash due at closing (incl. down payment)',M.map(m=>m.cashClose),fmt0,'min'],
+    ['Payoff time',M.map(m=>m.months),yearsMonths,'min'],
+    ['Total cost of loan (P + interest + PMI + upfront)',M.map(m=>m.total),fmt0,'min']];
+  let html='<thead><tr><th></th>'+scenarios.map((sc,i)=>'<th>'+String.fromCharCode(65+i)+': '+esc(sc.name)+'</th>').join('')+'</tr></thead><tbody>';
+  for(const [label,vals,f,best] of rows){
+    const bv=(best&&vals.length>1)?(best==='max'?Math.max(...vals):Math.min(...vals)):null;
+    html+='<tr><td>'+label+'</td>'+vals.map(x=>'<td'+(bv!==null&&Math.abs(x-bv)<0.01?' class="best"':'')+'>'+f(x)+'</td>').join('')+'</tr>';
+  }
+  $('cmpTable').innerHTML=html+'</tbody>';
+}
+$('saveBtn').addEventListener('click',()=>{
+  if(scenarios.length>=MAX_SNAPS){$('saveMsg').textContent='Limit of '+MAX_SNAPS+' saved loans — remove one on the Compare tab first.';return;}
+  const v=getVals();
+  const name=$('saveName').value.trim()||autoName(v);
+  scenarios.push({name,v});
+  $('saveName').value='';
+  $('saveMsg').textContent='Saved "'+name+'" ('+scenarios.length+' of '+MAX_SNAPS+'). See the Compare tab.';
+  renderCmp();
+});
+$('cmpCards').addEventListener('click',e=>{
+  const load=e.target.dataset.load, del=e.target.dataset.del;
+  if(load!==undefined){
+    setVals(scenarios[+load].v);
+    document.querySelector('.tab[data-page="calc"]').click();
+    $('saveMsg').textContent='Loaded "'+scenarios[+load].name+'" into the calculator.';
+  }
+  if(del!==undefined){scenarios.splice(+del,1);renderCmp();}
+});
+$('cmpCards').addEventListener('input',e=>{
+  const i=e.target.dataset.name;
+  if(i!==undefined){
+    scenarios[+i].name=e.target.value;
+    const th=$('cmpTable').querySelectorAll('thead th')[+i+1];
+    if(th)th.textContent=String.fromCharCode(65+ +i)+': '+e.target.value;
+  }
+});
+
+// ================= REFINANCE =================
+function refi(){
+  const bal=num('rfBal'), r0=num('rfRate'), yrs=num('rfYears');
+  const n0=Math.max(1,Math.round(yrs*12));
+  const oldPay=pmt(bal,r0/1200,n0), oldInt=oldPay*n0-bal;
+  const cost=num('rfCost'), roll=$('rfRoll').value==='roll', cash=num('rfCashOut');
+  const nr=num('rfNewRate'), nt=parseInt($('rfNewTerm').value), n1=nt*12;
+  const newP=bal+cash+(roll?cost:0);
+  const newPay=pmt(newP,nr/1200,n1), newInt=newPay*n1-newP;
+  const delta=oldPay-newPay;
+  $('rfOldPay').textContent=fmt2(oldPay);
+  $('rfNewPay').textContent=fmt2(newPay);
+  const dE=$('rfDelta');
+  dE.className='v '+(delta>=0?'good':'bad');
+  dE.textContent=fmt2(Math.abs(delta))+(delta>=0?' less':' more');
+  $('rfBreak').textContent=(delta>0&&cost>0)?yearsMonths(Math.ceil(cost/delta)):(delta>0?'Immediate':'Never');
+  $('rfOldInt').textContent=fmt0(oldInt);
+  $('rfNewInt').textContent=fmt0(newInt);
+  const life=oldPay*n0-(newPay*n1+(roll?0:cost)-cash);
+  const lE=$('rfLife');
+  lE.className='v '+(life>=0?'good':'bad');
+  lE.textContent=fmt0(Math.abs(life))+(life>=0?' saved':' extra');
+  const v=$('rfVerdict');
+  if(life>0&&delta>0){v.className='refi-verdict good';v.textContent='✓ Refinancing looks favorable: payment drops '+fmt2(delta)+'/mo, you break even on closing costs in '+yearsMonths(Math.ceil(cost/Math.max(delta,0.01)))+', and save about '+fmt0(life)+' over the life of the loan.';}
+  else if(life>0){v.className='refi-verdict good';v.textContent='✓ Monthly payment rises by '+fmt2(-delta)+', but the shorter/cheaper loan saves about '+fmt0(life)+' in total cost.';}
+  else{v.className='refi-verdict bad';v.textContent='✗ On these numbers, refinancing costs about '+fmt0(-life)+' more over the life of the loan.';}
+  const sOld=buildSchedule({P:bal,rate:r0,years:n0/12}), sNew=buildSchedule({P:newP,rate:nr,years:nt});
+  const maxY=Math.ceil(Math.max(sOld.months,sNew.months)/12), labels=[], a=[], b=[];
+  for(let y=0;y<=maxY;y++){
+    labels.push('Yr '+y);
+    a.push(y===0?bal:(sOld.rows[Math.min(y*12,sOld.months)-1]||{bal:0}).bal);
+    b.push(y===0?newP:(sNew.rows[Math.min(y*12,sNew.months)-1]||{bal:0}).bal);
+  }
+  makeChart('chRefi',{type:'line',
+    data:{labels,datasets:[{label:'Keep current loan',data:a,borderColor:'#64748b',tension:.25,pointRadius:0},
+      {label:'Refinance',data:b,borderColor:'#2563eb',tension:.25,pointRadius:0}]},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt0(c.parsed.y)}}},
+      scales:{y:{ticks:{callback:v2=>'$'+Math.round(v2/1000)+'k'}}}}});
+}
+
+// ================= WIRING =================
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+t.dataset.page));
+  if(t.dataset.page==='amort')renderAmort();
+  if(t.dataset.page==='compare')renderCmp();
+  if(t.dataset.page==='refi')refi();
+}));
+$('pillYear').addEventListener('click',()=>{amortMode='year';$('pillYear').classList.add('active');$('pillMonth').classList.remove('active');renderAmort();});
+$('pillMonth').addEventListener('click',()=>{amortMode='month';$('pillMonth').classList.add('active');$('pillYear').classList.remove('active');renderAmort();});
+// down payment $ <-> % sync (registered before the generic recalc listeners)
+$('downD').addEventListener('input',()=>{const p=num('price');if(p)$('downP').value=(num('downD')/p*100).toFixed(2).replace(/\.?0+$/,'');});
+$('downP').addEventListener('input',()=>{$('downD').value=Math.round(num('price')*num('downP')/100);});
+$('price').addEventListener('input',()=>{$('downD').value=Math.round(num('price')*num('downP')/100);});
+document.querySelectorAll('#page-calc input, #page-calc select').forEach(el=>el.addEventListener('input',calc));
+document.querySelectorAll('#page-refi input, #page-refi select').forEach(el=>el.addEventListener('input',refi));
+renderExp(); calc(); refi(); renderCmp();
+// v2: saved-scenario compare + salary
+</script>
+</body>
+</html>
